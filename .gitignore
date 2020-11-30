@@ -1,0 +1,48 @@
+# byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build
+_build
+*.so
+
+# init tests / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE
+.idea
+
+# Artifacts
+.DS_Store
+
+# Log history
+*.log
