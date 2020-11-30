@@ -2,7 +2,7 @@
 
 ---
 
-<a href="https://github.com/KhaosResearch/drama"><img alt="Version: 4.2.0" src="https://img.shields.io/badge/version-4.2.0-success?color=0080FF&style=flat-square"></a> <a href="https://github.com/KhaosResearch/drama"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square"></a>
+<a href="https://github.com/KhaosResearch/drama"><img alt="Version: 0.5.0" src="https://img.shields.io/badge/version-0.5.0-success?color=0080FF&style=flat-square"></a> <a href="https://github.com/KhaosResearch/drama"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square"></a>
 
 *`drama` is an asynchronous workflow executor engine supported by a command line tool and RESTful API.*
 
@@ -140,3 +140,6 @@ print(r.text)
 ```
 
 _(This script is complete, it should run "as is")_
+
+<p align="center">&mdash; ⭐️ &mdash;</p>
+<p align="center"><i>Designed & built by Khaos Research (University of Málaga).</i></p>
