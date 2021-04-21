@@ -1,8 +1,6 @@
-## [drama](https://github.com/benhid/drama) 
+## [drama](https://github.com/KhaosResearch/drama) 
 
----
-
-<a href="https://github.com/benhid/drama"><img alt="Version: 0.5.5" src="https://img.shields.io/badge/version-4.2.0-success?color=0080FF&style=flat-square"></a> <a href="https://github.com/benhid/drama"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square"></a>
+<a href="https://github.com/KhaosResearch/drama"><img alt="Version: 0.5.5" src="https://img.shields.io/badge/version-0.5.5-success?color=0080FF&style=flat-square"></a> <a href="https://github.com/KhaosResearch/drama"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square"></a>
 
 *`drama` is an asynchronous workflow executor engine supported by a command line tool and RESTful API.*
 
@@ -26,7 +24,7 @@ docker-compose [-f docker-compose-kafka.yml] up -d
 Via source code using [Poetry](https://github.com/python-poetry/poetry):
 
 ```commandline
-git clone https://github.com/benhid/drama.git
+git clone https://github.com/KhaosResearch/drama.git
 cd drama
 poetry install
 ```

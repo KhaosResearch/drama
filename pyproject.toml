@@ -3,9 +3,9 @@ name = "drama"
 version = "0.5.5"
 readme = "README.md"
 description = "Workflow orchestration engine"
-homepage = "https://github.com/benhid/drama/"
-repository = "https://github.com/benhid/drama/"
-authors = ["Antonio Benítez Hidalgo <antoniobenitezhid@gmail.com>"]
+homepage = "https://github.com/KhaosResearch/drama/"
+repository = "https://github.com/KhaosResearch/drama/"
+authors = ["Khaos Research Group"]
 classifiers=[
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.7",
