@@ -1,12 +1,16 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, validator
 
+from drama.storage.base import Resource
 
-class Result(BaseModel):
-    message: Any
+
+class TaskResult(BaseModel):
+    message: Optional[Any] = None
+    files: Optional[Union[List[Resource], List[Dict[str, Resource]]]] = []
+    log: Optional[Resource] = None
 
 
 class TaskStatus(str, Enum):
@@ -56,10 +60,10 @@ class Task(TaskRequest):
     labels: List[str] = []
     options: TaskOpts = TaskOpts()
     metadata: dict = {}
-    status: Optional[TaskStatus] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    result: Optional[Result] = None
+    result: Optional[TaskResult] = None
+    status: Optional[TaskStatus] = None
 
     class Config:
         use_enum_values = True

@@ -1,12 +1,16 @@
 import shutil
 from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Union
 
-from drama.storage.base import Storage
+from drama.storage.base import Resource, Storage
+
+
+class LocalResource(Resource):
+    pass
 
 
 class LocalStorage(Storage):
-    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> str:
+    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> LocalResource:
         if isinstance(file_path, Path):
             file_path = str(file_path)
 
@@ -20,9 +24,12 @@ class LocalStorage(Storage):
         if rename:
             Path(file_path).rename(Path(self.local_dir, file_name))
 
-        return file_path
+        return LocalResource(resource=str(file_path))
 
     def get_file(self, data_file: str) -> str:
         if not Path(data_file).is_file():
             raise FileNotFoundError()
         return data_file
+
+    def remove_remote_dir(self, omit_files: List[str] = None) -> None:
+        pass

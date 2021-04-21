@@ -1,12 +1,12 @@
 import csv
 from typing import Dict
 
-from drama.core.annotation import component
+from drama.core.annotation import TaskMeta, annotation
 from drama.core.model import SimpleTabularDataset
 from drama.process import Process
 
 
-@component(inputs=("TabularDataset", SimpleTabularDataset))
+@annotation(TaskMeta(name="ReadTSV", desc="Reads a TSV file", inputs=("TabularDataset", SimpleTabularDataset)))
 def execute(pcs: Process, **kwargs):
     """
     Reads a TSV file.
@@ -18,7 +18,8 @@ def execute(pcs: Process, **kwargs):
     input_file_delimiter = input_file["delimiter"]
     input_file_resource = input_file["resource"]
 
-    with open(input_file_resource, "r") as reader:
-        reader = csv.reader(reader, delimiter=input_file_delimiter)
-        for row in reader:
+    filepath = pcs.storage.get_file(input_file_resource)
+
+    with open(filepath, "r") as reader:
+        for row in csv.reader(reader, delimiter=input_file_delimiter):
             pcs.info(row)

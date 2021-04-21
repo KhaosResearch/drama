@@ -1,9 +1,6 @@
-from drama.core.annotation import component
 from drama.process import Process
-from drama.tests.test_process import Point
 
 
-@component(inputs=("Points", Point))
 def execute(pcs: Process):
     """
     Reads 3D-Point with cartesian coordinates.

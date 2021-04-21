@@ -1,13 +1,17 @@
 import shutil
 from pathlib import Path
 from socket import gaierror
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from hdfs import InsecureClient
 from urllib3.exceptions import NewConnectionError
 
 from drama.config import settings
-from drama.storage.base import Storage
+from drama.storage.base import NotValidScheme, Resource, Storage
+
+
+class HDFSResource(Resource):
+    scheme = "hdfs://"
 
 
 class HDFSStorage(Storage):
@@ -15,14 +19,14 @@ class HDFSStorage(Storage):
         super().__init__(bucket_name, folder_name)
         self.client = InsecureClient(url=settings.HDFS_CONN, user=settings.HDFS_USERNAME)
 
-    def setup(self) -> str:
+    def setup(self) -> HDFSResource:
         super().setup()
 
         self.client.makedirs(f"{self.bucket_name}/{self.folder_name}")
 
-        return f"hdfs:/{self.bucket_name}/{self.folder_name}/"
+        return HDFSResource(resource=f"hdfs:/{self.bucket_name}/{self.folder_name}/")
 
-    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> str:
+    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> HDFSResource:
         if isinstance(file_path, Path):
             file_path = str(file_path)
 
@@ -37,11 +41,11 @@ class HDFSStorage(Storage):
         except (gaierror, NewConnectionError):
             raise
 
-        return f"hdfs:/{self.bucket_name}/{self.folder_name}/{file_name}"
+        return HDFSResource(resource=f"hdfs:/{self.bucket_name}/{self.folder_name}/{file_name}")
 
     def get_file(self, data_file: str) -> str:
         if not data_file.startswith("hdfs:"):
-            raise Exception("Object file prefix is invalid: expected `hdfs:`")
+            raise NotValidScheme("Object file prefix is invalid: expected `hdfs:`")
 
         _, bucket_name, folder_name, file_name = data_file.split("/")
         file_path = Path(self.temp_dir, bucket_name, folder_name, file_name)
@@ -53,3 +57,6 @@ class HDFSStorage(Storage):
                 print(err)
 
         return str(file_path)
+
+    def remove_remote_dir(self, omit_files: List[str] = None) -> None:
+        pass

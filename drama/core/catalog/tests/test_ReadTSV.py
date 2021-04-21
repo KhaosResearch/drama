@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from drama.core.annotation import TaskMeta
 from drama.core.catalog.read.ReadTSV import execute
 from drama.core.catalog.tests import RESOURCES
 from drama.core.model import SimpleTabularDataset
@@ -33,13 +34,14 @@ class ReadTSVIntegrationTestCase(unittest.TestCase):
         self.assertTrue(Path(self.pcs.storage.local_dir, "countries.csv").is_file())
 
     def tearDown(self) -> None:
-        self.pcs.storage.on_fail_remove_local_dir()
+        self.pcs.storage.remove_local_dir()
 
 
 class ReadTSVComponentTestCase(unittest.TestCase):
     def test_definition(self):
-        self.assertEqual(getattr(execute, "inputs"), ("TabularDataset", SimpleTabularDataset))
-        self.assertEqual(getattr(execute, "outputs"), None)
+        meta: TaskMeta = getattr(execute, "__meta__")
+        self.assertEqual(meta.inputs, ("TabularDataset", SimpleTabularDataset))
+        self.assertEqual(meta.outputs, None)
 
 
 if __name__ == "__main__":

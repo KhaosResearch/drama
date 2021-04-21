@@ -4,9 +4,11 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock
 
+from drama.core.annotation import TaskMeta
 from drama.core.catalog.load.ImportTSV import execute
 from drama.core.catalog.tests import RESOURCES
 from drama.core.model import SimpleTabularDataset
+from drama.models.task import TaskResult
 from drama.storage import LocalStorage
 
 
@@ -22,10 +24,6 @@ class ImportTSVIntegrationTestCase(unittest.TestCase):
         storage.setup()
 
         self.pcs = MagicMock(storage=storage)
-
-    def test_definition(self):
-        self.assertEqual(getattr(execute, "inputs"), None)
-        self.assertEqual(getattr(execute, "outputs"), SimpleTabularDataset)
 
     @mock.patch("urllib.request.urlretrieve", side_effect=_mocked_urlretrieve)
     def test_integration(self, urlretrieve):
@@ -43,17 +41,17 @@ class ImportTSVIntegrationTestCase(unittest.TestCase):
         self.assertMultiLineEqual("param1  False\nparam2	Yes\nparam3\n", out_tsv)
 
         # assert output data is valid
-        self.assertEqual(data.keys(), {"output", "resource"})
-        self.assertIs(type(data["output"]), SimpleTabularDataset)
+        self.assertIs(type(data), TaskResult)
 
     def tearDown(self) -> None:
-        self.pcs.storage.on_fail_remove_local_dir()
+        self.pcs.storage.remove_local_dir()
 
 
 class ImportFileComponentTestCase(unittest.TestCase):
     def test_definition(self):
-        self.assertEqual(getattr(execute, "inputs"), None)
-        self.assertEqual(getattr(execute, "outputs"), SimpleTabularDataset)
+        meta: TaskMeta = getattr(execute, "__meta__")
+        self.assertEqual(meta.inputs, None)
+        self.assertEqual(meta.outputs, SimpleTabularDataset)
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "drama"
-version = "0.5.0"
+version = "0.5.5"
 readme = "README.md"
 description = "Workflow orchestration engine"
-homepage = "https://github.com/KhaosResearch/drama/"
-repository = "https://github.com/KhaosResearch/drama/"
-authors = ["Antonio Benítez Hidalgo <khaos.research@gmail.com>"]
+homepage = "https://github.com/benhid/drama/"
+repository = "https://github.com/benhid/drama/"
+authors = ["Antonio Benítez Hidalgo <antoniobenitezhid@gmail.com>"]
 classifiers=[
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.7",
@@ -21,21 +21,21 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-fastapi = "^0.60.1"
-pydantic = {extras = ["dotenv"], version = "^1.5.1"}
-uvicorn = "^0.11.5"
+fastapi = "^0.63.0"
+pydantic = {extras = ["dotenv"], version = "^1.8.1"}
+uvicorn = "^0.13.4"
 requests = "^2.23.0"
-fastavro = "^0.23.4"
-kafka-python = "^2.0.1"
+fastavro = "^1.3.5"
+kafka-python = "^2.0.2"
 dramatiq = {extras = ["rabbitmq", "watch"], version = "^1.9.0"}
 pymongo = "^3.10.1"
-minio = "^6.0.0"
-hdfs = "^2.5.8"
+minio = "^7.0.3"
+hdfs = "^2.6.0"
 filelock = "^3.0.12"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8.b1"
-mypy = "^0.780"
+mypy = "^0.812"
 isort = "^5.5.2"
 pytest = "^6.1.0"
 

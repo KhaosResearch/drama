@@ -4,10 +4,40 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional, Union
 
+from pydantic import BaseModel, validator
+
 from drama.config import settings
 from drama.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+class NotValidScheme(Exception):
+    """
+    Raised when scheme is not present.
+    """
+
+    pass
+
+
+class Resource(BaseModel):
+    scheme: str = ""
+    resource: str
+
+    @validator("resource")
+    def resource_must_have_scheme(cls, v, values, **kwargs):
+        assert str(v).startswith(values.get("scheme", "")), "invalid resource"
+        return v
+
+    def encode(self, **kwargs):
+        """
+        This is required for fastavro writer.
+        """
+        return self.resource.encode(**kwargs)
+
+
+class LocalResource(Resource):
+    pass
 
 
 class Storage(ABC):
@@ -18,16 +48,15 @@ class Storage(ABC):
         self.temp_dir = settings.DATA_DIR
         self.local_dir = Path(self.temp_dir, self.bucket_name, self.folder_name)
 
-    def setup(self) -> str:
+    def setup(self) -> LocalResource:
         """
         Setup directory tree.
         """
         self.local_dir.mkdir(parents=True, exist_ok=True)
-
-        return self.local_dir
+        return LocalResource(resource=str(self.local_dir))
 
     @abstractmethod
-    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> str:
+    def put_file(self, file_path: Union[str, Path], rename: Optional[str] = None) -> Resource:
         """
         Uploads an object to storage and returns its data file identifier.
         """
@@ -56,7 +85,7 @@ class Storage(ABC):
             item_path = Path(self.local_dir, item)
 
             if item in omit_files:
-                shutil.move(item_path, Path(self.local_dir, f"{item}.old"))
+                shutil.move(str(item_path), str(Path(self.local_dir, f"{item}.old")))
                 continue
 
             logger.warning(f"Item {item_path} marked for remove")
@@ -69,6 +98,7 @@ class Storage(ABC):
         if not omit_files:
             shutil.rmtree(self.local_dir, ignore_errors=True)
 
+    @abstractmethod
     def remove_remote_dir(self, omit_files: List[str] = None) -> None:
         """
         Remove `task_dir` directory from remote storage.

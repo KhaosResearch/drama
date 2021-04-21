@@ -1,6 +1,6 @@
+import random
 from dataclasses import dataclass
 
-from drama.core.annotation import component
 from drama.datatype import DataType, is_integer
 from drama.process import Process
 
@@ -12,17 +12,18 @@ class Point(DataType):
     z: int = is_integer(default=0)
 
 
-@component(outputs=Point)
 def execute(pcs: Process, x: int, y: int):
     """
     Parameters:
-        pcs (Process): `drama` process
         x (int): x-cartesian coordinate
         y (int): y-cartesian coordinate
     """
-    pcs.info([f"Generating point ({x},{y},0)"])
-    point = Point(x, y)
+    pcs.info([f"Generating point ({x},{y},?)"])
 
     # send to downstream
-    for _ in range(10):
+    for i in range(10):
+        z = random.randint(0, 10)
+        point = Point(x, y, z)
+
+        pcs.info([f"Sending {i}"])
         pcs.to_downstream(point)

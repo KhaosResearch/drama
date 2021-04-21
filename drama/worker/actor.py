@@ -1,4 +1,3 @@
-import json
 import traceback
 from datetime import datetime
 
@@ -11,7 +10,7 @@ from drama.config import settings
 from drama.database import get_db_connection
 from drama.logger import get_logger
 from drama.manager import TaskManager
-from drama.models.task import Result, TaskStatus
+from drama.models.task import TaskResult, TaskStatus
 from drama.process import Process
 from drama.storage.helpers import get_available_storage
 from drama.worker.helpers import get_process_func
@@ -21,7 +20,6 @@ logger = get_logger(__name__)
 # setup broker
 logger.debug("Setting up RabbitMQ broker")
 broker = RabbitmqBroker(url=settings.RABBIT_DNS)
-broker.declare_queue(settings.DEFAULT_ACTOR_OPTS.queue_name)
 broker.add_middleware(CurrentMessage())
 
 # set broker
@@ -30,7 +28,7 @@ dramatiq.set_broker(broker)
 
 
 @dramatiq.actor(**settings.DEFAULT_ACTOR_OPTS.dict())
-def process(task_request: dict):
+def process_task(task_request: dict):
     """
     Main `drama` actor.
     Executes an arbitrary function defined by a task and updates its state.
@@ -78,14 +76,11 @@ def process(task_request: dict):
 
         # execute imported function
         data = func(**task_params, pcs=task_process)
-
-        # result *must be* JSON serializable
-        if data and not isinstance(data, str):
-            logger.debug(f"Result from task {task_id} not JSON serializable, trying auto conversion")
-            if isinstance(data, dict):
-                data = json.dumps(data, default=str)
-            else:
-                data = str(data)
+        if data:
+            if not isinstance(data, TaskResult):
+                data = TaskResult(message=str(data))
+        if not data:
+            data = TaskResult()
     except ImportError:
         task_process.error(traceback.format_exc())
         task_process.close(force_interruption=force_interruption)
@@ -100,16 +95,20 @@ def process(task_request: dict):
         task_process.close(force_interruption=force_interruption, remove_local_dir=remove_local_dir)
         raise
 
-    task_process.close()
-
+    remote_logging_file = task_process.close()
     task_process.info(f"Task {task_id} successfully executed")
 
-    return data
+    data.log = remote_logging_file
+
+    # result of this function *must be* JSON-encodable
+    data_as_json = data.json()
+
+    return data_as_json
 
 
 def process_running(message: MessageProxy):
     """
-    Set task status to `RUNNING`.
+    Sets task status to `RUNNING`.
     """
     db = get_db_connection()
 
@@ -121,17 +120,18 @@ def process_running(message: MessageProxy):
 
 
 @dramatiq.actor(queue_name=settings.DEFAULT_ACTOR_OPTS.queue_name)
-def process_succeeded(message, result_data):
+def process_succeeded(message: dict, result_data: str):
     """
     Actor success callback. Set task status to `DONE` and append result.
     """
     db = get_db_connection()
+    task_result = TaskResult.parse_raw(result_data)
 
     TaskManager(db).create_or_update_from_id(
         message["message_id"],
         status=TaskStatus.STATUS_DONE,
         updated_at=datetime.now(),
-        result=Result(message=result_data),
+        result=task_result,
     )
 
 
@@ -141,10 +141,11 @@ def process_failure(message, exception_data):
     Actor failure callback. Set task status to `FAILED` and append traceback.
     """
     db = get_db_connection()
+    task_result = TaskResult(message=exception_data)
 
     TaskManager(db).create_or_update_from_id(
         message["message_id"],
         status=TaskStatus.STATUS_FAILED,
         updated_at=datetime.now(),
-        result=Result(message=exception_data),
+        result=task_result,
     )

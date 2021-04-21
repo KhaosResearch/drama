@@ -7,7 +7,7 @@ from drama.worker import execute, revoke
 
 task_one = TaskRequest(
     name="ComponentPointReader1",
-    module="examples/generate_points/PointReader.py",
+    module="examples/generate_points/catalog/PointReader.py",
     inputs={
         "Points": "ComponentPointPublisher.Point",
     },
@@ -15,7 +15,7 @@ task_one = TaskRequest(
 
 task_two = TaskRequest(
     name="ComponentPointReader2",
-    module="examples/generate_points/StreamingPointReader.py",
+    module="examples/generate_points/catalog/StreamingPointReader.py",
     inputs={
         "Points": "ComponentPointPublisher.Point",
     },

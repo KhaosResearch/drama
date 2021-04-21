@@ -12,10 +12,8 @@ from drama.datatype import DataType, get_dict, get_schema
 from drama.logger import get_logger
 from drama.models.messages import Message, MessageType, Servo, SignalMessage, SignalType
 from drama.servo import deserialize, serialize
-from drama.storage import LocalStorage
-from drama.storage.base import Storage
-
-logger = get_logger(__name__)
+from drama.storage.base import Resource, Storage
+from drama.storage.helpers import get_available_storage
 
 
 class LoggingMessageType(str, Enum):
@@ -41,9 +39,9 @@ class BaseProcess:
         storage: Optional[Storage] = None,
     ):
         """
-        :param id: Task id.
         :param name: Task name.
-        :param module:
+        :param module: Task module.
+        :param parent: Parent task id.
         """
         self.name = name
         self.module = module
@@ -57,11 +55,13 @@ class BaseProcess:
 
         # storage
         if not storage:
-            storage = LocalStorage(bucket_name=self.parent, folder_name=self.name)
+            _storage = get_available_storage()
+            storage = _storage(bucket_name=self.parent, folder_name=self.name)
         self.storage = storage
         self.storage.setup()
 
         # logging
+        self.logger = get_logger(__name__)
         self.logging_file = tempfile.NamedTemporaryFile(dir=storage.temp_dir)
 
     @abstractmethod
@@ -77,38 +77,38 @@ class BaseProcess:
         pass
 
     @abstractmethod
-    def close(self, force_interruption: bool = False, destroy_storage: bool = False) -> SignalMessage:
+    def close(self, force_interruption: bool = False, destroy_storage: bool = False) -> Resource:
         pass
 
-    def info(self, message: Union[str, list]) -> None:
+    def info(self, message: Union[str, List[str]]) -> None:
         """
         Logs INFO message.
         """
-        logger.info(message)
+        self.logger.info(message)
         self._log(message, LoggingMessageType.INFO)
 
-    def debug(self, message: Union[str, list]) -> None:
+    def debug(self, message: Union[str, List[str]]) -> None:
         """
         Logs DEBUG message.
         """
-        logger.debug(message)
+        self.logger.debug(message)
         self._log(message, LoggingMessageType.DEBUG)
 
-    def warn(self, message: Union[str, list]) -> None:
+    def warn(self, message: Union[str, List[str]]) -> None:
         """
         Logs WARNING message.
         """
-        logger.warn(message)
+        self.logger.warn(message)
         self._log(message, LoggingMessageType.WARN)
 
-    def error(self, message: Union[str, list]) -> None:
+    def error(self, message: Union[str, List[str]]) -> None:
         """
         Logs ERROR message.
         """
-        logger.exception(message)
+        self.logger.exception(message)
         self._log(message, LoggingMessageType.ERROR)
 
-    def _log(self, message: Union[str, list], flag: LoggingMessageType) -> None:
+    def _log(self, message: Union[str, List[str]], flag: LoggingMessageType) -> None:
         """
         Writes message to logging file.
         """
@@ -148,6 +148,7 @@ class Process(BaseProcess):
         storage: Optional[Storage] = None,
     ):
         super().__init__(name, module, parent, params, inputs, storage)
+        self.logger = get_logger(__name__, name=name)
 
     def to_downstream(self, data: DataType) -> Message:
         """
@@ -189,7 +190,7 @@ class Process(BaseProcess):
         :param apply_servo: If true, incoming messages are automatically deserialized. Defaults to `True`.
         """
         if not self.inputs:
-            raise Exception("Tried to poll from upstream, but no input task(s) defined")
+            raise Exception("Tried to poll from upstream, but no input defined")
 
         inputs_names = [inn.split(".")[0] for inn in self.inputs.values()]  # eg., [Task1, Task2]
         inputs_remaining = [v for _, v in self.inputs.items()]  # eg., [Task1.Data1, Task1.Data2, Task2.Data1]
@@ -218,7 +219,7 @@ class Process(BaseProcess):
 
                     # deserialize message
                     serialized_message = record.value
-                    deserialized_message: Dict[Message] = deserialize(serialized_message, self.MESSAGE_SCHEMA)
+                    deserialized_message: Dict[Message] = deserialize(serialized_message, self.MESSAGE_SCHEMA)  # type: ignore
 
                     message = Message(**deserialized_message)
 
@@ -235,25 +236,27 @@ class Process(BaseProcess):
                     elif message.type == MessageType.BLOCK:
                         # input tasks can send multiple messages with different data attached (eg., DataA and DataB),
                         #  but we might be only interested in some of them
-                        message_key = message.key
+                        message_key: str = message.key
 
                         self.debug([f"Received {message_key} from task {incoming_task_name}"])
+
+                        if message_key not in self.inputs.values():
+                            # received message is not an input of this task
+                            self.debug([f"Discarding message {message_key}"])
+                            continue
 
                         try:
                             # delete from remaining list
                             inputs_remaining.remove(message_key)
                         except ValueError:
-                            # received message is not an input of this task
-                            continue
+                            pass
 
                         datatype = message.data
 
                         if apply_servo:
-                            serialized_datatype = message.data
-                            schema = message.schem
-
-                            schema = json.loads(schema)
-                            datatype = deserialize(serialized_datatype, schema)
+                            serialized_datatype: bytes = message.data
+                            schema: str = message.schem
+                            datatype = deserialize(serialized_datatype, json.loads(schema))
 
                         self.debug([f"{incoming_task_name} content: {datatype}"])
 
@@ -263,7 +266,7 @@ class Process(BaseProcess):
                         raise NotImplementedError(f"Unrecognized message type: {message.type}")
 
         # at this point, all tasks have send STOP signals
-        # check if all inputs have been yielded as expected
+        # check if all inputs have been yielded (as expected)
         if len(inputs_remaining) > 0:
             raise Exception(f"Some inputs were declared but are missing: {inputs_remaining}")
 
@@ -281,7 +284,7 @@ class Process(BaseProcess):
 
         return messages
 
-    def close(self, force_interruption: bool = False, remove_local_dir: bool = False) -> SignalMessage:
+    def close(self, force_interruption: bool = False, remove_local_dir: bool = False) -> Resource:
         """
         Sends close message thought Kafka topic, to report that task has ended and will no longer
         produce messages.
@@ -294,21 +297,23 @@ class Process(BaseProcess):
         else:
             self.debug(["Task gracefully closed"])
 
-        # send log to remote storage (also, delete named temporal file in local temp dir)
         logging_filename = "log.txt"
 
-        self.storage.put_file(self.logging_file.name, rename=logging_filename)
+        # send log to remote storage
+        logging_remote = self.storage.put_file(self.logging_file.name, rename=logging_filename)
+
+        # once uploaded, delete named temporal file in local temp dir
         self.logging_file.close()
 
-        # remove local directory without deleting the logging file
         if remove_local_dir:
+            # remove local directory without deleting the logging file (always kept for debugging purposes)
             self.storage.remove_local_dir(omit_files=[logging_filename])
 
         # send interruption signal
         signal = SignalMessage(data=SignalType.INTE if force_interruption else SignalType.STOP)
         self._send(signal)
 
-        return signal
+        return logging_remote
 
     def _send(self, message: Union[Message, SignalMessage], **kwargs) -> None:
         """

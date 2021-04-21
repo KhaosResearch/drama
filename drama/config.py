@@ -3,8 +3,9 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from dramatiq import get_logger
 from pydantic import AnyUrl, BaseModel, BaseSettings
+
+from drama.logger import get_logger
 
 logger = get_logger(__name__)
 

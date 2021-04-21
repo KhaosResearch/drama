@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from drama.core.catalog.load.ImportFile import execute
 from drama.core.catalog.tests import RESOURCES
 from drama.core.model import TempFile
+from drama.models.task import TaskResult
 from drama.storage import LocalStorage
 
 
@@ -23,10 +24,6 @@ class ImportFileIntegrationTestCase(unittest.TestCase):
         self.pcs = MagicMock(storage=storage)
         self.pcs.to_downstream = MagicMock(return_value=None)
 
-    def test_definition(self):
-        self.assertEqual(getattr(execute, "inputs"), None)
-        self.assertEqual(getattr(execute, "outputs"), TempFile)
-
     @mock.patch("urllib.request.urlretrieve")
     def test_integration(self, urlretrieve):
         # execute func
@@ -42,17 +39,18 @@ class ImportFileIntegrationTestCase(unittest.TestCase):
             self.assertEqual(columns, "Country,Region\n")
 
         # assert output is valid
-        self.assertEqual(data.keys(), {"output", "resource"})
-        self.assertIs(type(data["output"]), TempFile)
+        self.assertIs(type(data), TaskResult)
 
     def tearDown(self) -> None:
-        self.pcs.storage.on_fail_remove_local_dir()
+        self.pcs.storage.remove_local_dir()
 
 
 class ImportFileComponentTestCase(unittest.TestCase):
     def test_definition(self):
-        self.assertEqual(getattr(execute, "inputs"), None)
-        self.assertEqual(getattr(execute, "outputs"), TempFile)
+        meta = getattr(execute, "__meta__")
+
+        self.assertEqual(meta.inputs, None)
+        self.assertEqual(meta.outputs, TempFile)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,10 @@ class AtomicType(Enum):
 
 @dataclass
 class DataType:
+    """
+    Dataclass used for serialization/deserialization with AVRO.
+    """
+
     @property
     def key(self):
         return type(self).__name__

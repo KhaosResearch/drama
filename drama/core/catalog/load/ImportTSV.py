@@ -4,13 +4,22 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-from drama.core.annotation import component
+from drama.core.annotation import TaskMeta, annotation
 from drama.core.model import SimpleTabularDataset
+from drama.models.task import TaskResult
 from drama.process import Process
+from drama.storage.base import NotValidScheme
 
 
-@component(outputs=SimpleTabularDataset)
-def execute(pcs: Process, url: str, delimiter: str = "\t", comment: str = "#"):
+@annotation(
+    TaskMeta(
+        name="ImportTSV",
+        desc="Imports a tab-separated values file from an online resource given its url",
+        outputs=SimpleTabularDataset,
+        params=[("url", str), ("delimiter", str, "\t"), ("comment", str, "#")],
+    )
+)
+def execute(pcs: Process, url: str, delimiter: str = "\t", comment: str = "#") -> TaskResult:
     """
     Imports a tab-separated values file from an online resource given its url.
 
@@ -23,9 +32,13 @@ def execute(pcs: Process, url: str, delimiter: str = "\t", comment: str = "#"):
         comment (str). Character representing starting comment. Defaults to "#".
     """
     filename = Path(urlparse(url).path).name
-    filepath = Path(pcs.storage.local_dir, filename)
 
-    urllib.request.urlretrieve(url, filepath)
+    try:
+        filepath = pcs.storage.get_file(url)
+    except (NotValidScheme, FileNotFoundError):
+        pcs.warn("No valid scheme was provided")
+        filepath = Path(pcs.storage.local_dir, filename)
+        urllib.request.urlretrieve(url, filepath)
 
     out_tsv = Path(pcs.storage.local_dir, "out.tsv")
 
@@ -45,6 +58,8 @@ def execute(pcs: Process, url: str, delimiter: str = "\t", comment: str = "#"):
         for row in reader:
             writer.writerow(row)
 
+    pcs.info(f"Out file: {outfile}")
+
     # send to remote storage
     dfs_dir = pcs.storage.put_file(out_tsv)
 
@@ -52,4 +67,4 @@ def execute(pcs: Process, url: str, delimiter: str = "\t", comment: str = "#"):
     output_simple_tabular_dataset = SimpleTabularDataset(resource=dfs_dir, delimiter="\t", file_format=".tsv")
     pcs.to_downstream(output_simple_tabular_dataset)
 
-    return {"output": output_simple_tabular_dataset, "resource": dfs_dir}
+    return TaskResult(files=[dfs_dir])
