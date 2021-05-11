@@ -47,3 +47,6 @@ dmypy.json
 # Log history
 *.log
 *.log.*
+
+# Storage volumes
+volumes/
