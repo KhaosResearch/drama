@@ -80,7 +80,7 @@ class MinIOStorage(Storage):
 
     def get_file(self, data_file: str) -> str:
         if not data_file.startswith("minio://"):
-            raise NotValidScheme("Object file prefix is invalid: expected `minio://`")
+            raise NotValidScheme(f"Object file prefix for '{data_file}' is invalid: expected `minio://`")
 
         # remove scheme and deconstruct path
         bucket_name, object_name = data_file[len("minio://") :].split("/", 1)

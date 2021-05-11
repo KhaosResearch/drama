@@ -1,5 +1,7 @@
 import json
+import os
 import tempfile
+
 from abc import abstractmethod
 from datetime import datetime
 from enum import Enum
@@ -62,7 +64,11 @@ class BaseProcess:
 
         # logging
         self.logger = get_logger(__name__)
-        self.logging_file = tempfile.NamedTemporaryFile(dir=storage.temp_dir)
+        # Note that opening a NamedTemporaryFile multiple times will cause a
+        # PermissionError on Windows. To avoid this, one solution is to set the
+        # delete flag to False. This, however, requires to delete the file manually
+        # when it is closed. Base on: https://stackoverflow.com/questions/23212435.
+        self.logging_file = tempfile.NamedTemporaryFile(dir=storage.temp_dir, delete=False)
 
     @abstractmethod
     def to_downstream(self, data: DataType) -> Message:
@@ -302,8 +308,11 @@ class Process(BaseProcess):
         # send log to remote storage
         logging_remote = self.storage.put_file(self.logging_file.name, rename=logging_filename)
 
-        # once uploaded, delete named temporal file in local temp dir
+        # once uploaded, delete named temporal file in local temp dir.
         self.logging_file.close()
+        # Delete the temporary file explicitly since it was opened with the
+        # delete flag set to False.
+        os.unlink(self.logging_file.name)
 
         if remove_local_dir:
             # remove local directory without deleting the logging file (always kept for debugging purposes)

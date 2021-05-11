@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from typing import List, Optional, Union
@@ -27,7 +28,11 @@ class LocalStorage(Storage):
         return LocalResource(resource=str(file_path))
 
     def get_file(self, data_file: str) -> str:
-        if not Path(data_file).is_file():
+        # Use os.path.isfile(data_file) instead of Path(data_file).is_file()
+        # if the data_file may contain a URL. On WIndows systems, the latter
+        # will raise a OSError: [WinError 123]. As an alternative, catch the
+        # OSError and raise a FileNotFoundError.
+        if not os.path.isfile(data_file):
             raise FileNotFoundError()
         return data_file
 
