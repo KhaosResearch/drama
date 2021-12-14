@@ -19,7 +19,7 @@ docker-compose [-f docker-compose-kafka.yml] up -d
 
 ### 🚀 Setup 
 
-#### Installation
+#### Installation 
 
 Via source code using [Poetry](https://github.com/python-poetry/poetry):
 
