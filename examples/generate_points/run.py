@@ -1,14 +1,16 @@
-from drama.models.task import TaskRequest
-from drama.models.workflow import WorkflowRequest
-from drama.worker import execute
+import time
 
-task_one = TaskRequest(
+from drama.models.task import Task
+from drama.models.workflow import Workflow
+from drama.worker.scheduler import Scheduler
+
+task_one = Task(
     name="ComponentPointPublisher",
     module="examples/generate_points/catalog/PointPublisher.py",
     params={"x": 5, "y": 17},
 )
 
-task_two = TaskRequest(
+task_two = Task(
     name="ComponentStreamingPointReader",
     module="examples/generate_points/catalog/StreamingPointReader.py",
     inputs={
@@ -16,7 +18,7 @@ task_two = TaskRequest(
     },
 )
 
-task_three = TaskRequest(
+task_three = Task(
     name="ComponentPointReader",
     module="examples/generate_points/catalog/PointReader.py",
     inputs={
@@ -24,7 +26,11 @@ task_three = TaskRequest(
     },
 )
 
-workflow_request = WorkflowRequest(tasks=[task_one, task_two, task_three])
+workflow_request = Workflow(tasks=[task_one, task_two, task_three])
 
-# executes workflow
-workflow = execute(workflow_request)
+with Scheduler() as scheduler:
+    workflow = scheduler.run(workflow_request)
+    print(workflow)
+    print(scheduler.status(workflow_id=workflow.id))
+    time.sleep(5)
+    print(scheduler.status(workflow_id=workflow.id))

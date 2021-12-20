@@ -1,4 +1,5 @@
 import logging.config
+from typing import Optional
 
 DEFAULT_LOGGING_CONFIG = {
     "version": 1,
@@ -25,19 +26,19 @@ DEFAULT_LOGGING_CONFIG = {
     },
     "loggers": {
         "": {
-            "level": "WARN",
-            "handlers": ["rotate_file"],
+            "level": "INFO",
+            "handlers": ["console"],
         },
         "drama": {
             "level": "DEBUG",
-            "handlers": ["console"],
+            "handlers": ["rotate_file"],
         },
     },
 }
 
 
-def configure_logging():
-    logging.config.dictConfig(DEFAULT_LOGGING_CONFIG)
+def configure_logging(config: Optional[dict] = None):
+    logging.config.dictConfig(config or DEFAULT_LOGGING_CONFIG)
 
 
 def get_logger(module, name: str = None):

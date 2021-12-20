@@ -29,12 +29,11 @@ def execute(pcs: Process, url: str, parameters: Optional[str] = None, **kwargs) 
         url (str): Public accessible resource
         parameters (str): GET parameters to append to url
     """
-    filename = Path(urlparse(url).path).name
-
     try:
         filepath = pcs.storage.get_file(url)
     except (NotValidScheme, FileNotFoundError):
         pcs.warn("No valid scheme was provided")
+        filename = Path(urlparse(url).path).name
         filepath = Path(pcs.storage.local_dir, filename)
         if parameters:
             url = url + parameters

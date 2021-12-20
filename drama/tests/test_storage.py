@@ -29,7 +29,7 @@ class LocalStorageTestCase(unittest.TestCase):
     def setUp(self) -> None:
         task_parent, task_name = "tests", "test_storage"
 
-        self.storage = LocalStorage(bucket_name=task_parent, folder_name=task_name)
+        self.storage = LocalStorage(bucket_name=task_parent, folder_name=[task_name])
         self.storage.setup()
 
     def test_storage_creates_valid_directory(self):

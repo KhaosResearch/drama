@@ -3,8 +3,6 @@ import unittest
 
 from drama.servo import deserialize, serialize
 
-ABS_DIRNAME = os.path.dirname(os.path.abspath(__file__))
-
 
 class ServoTestCase(unittest.TestCase):
     weather_schema = {

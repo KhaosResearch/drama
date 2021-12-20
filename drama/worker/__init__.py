@@ -1,12 +1,8 @@
-from .actor import process_failure, process_running, process_succeeded, process_task
-from .executor import execute, execute_task, revoke
+from .worker import set_failure, set_running, set_success, worker
 
 __all__ = [
-    "process_task",
-    "process_running",
-    "process_succeeded",
-    "process_failure",
-    "execute",
-    "revoke",
-    "execute_task",
+    "worker",
+    "set_running",
+    "set_success",
+    "set_failure",
 ]

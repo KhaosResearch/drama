@@ -1,4 +1,3 @@
-import json
 import shutil
 from pathlib import Path
 from typing import List, Optional, Union
@@ -19,36 +18,29 @@ class MinIOResource(Resource):
 
 
 class MinIOStorage(Storage):
-    def __init__(self, bucket_name: str, folder_name: str):
+    def __init__(self, bucket_name: str, folder_name: List[str]):
+        root_bucket = settings.MINIO_BUCKET
+        if root_bucket:
+            folder_name = [bucket_name, *folder_name]
+            bucket_name = root_bucket
         super().__init__(bucket_name, folder_name)
+
         self.client = Minio(
-            settings.MINIO_CONN,
+            settings.MINIO_HOST,
             access_key=settings.MINIO_ACCESS_KEY,
             secret_key=settings.MINIO_SECRET_KEY,
-            secure=False,
+            secure=settings.MINIO_USE_SSL,
         )
 
     def setup(self) -> MinIOResource:
         super().setup()
 
-        policy_read_only = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Sid": "",
-                    "Effect": "Allow",  # todo this folder is public!
-                    "Principal": {"AWS": "*"},
-                    "Action": "s3:GetObject",
-                    "Resource": f"arn:aws:s3:::{self.bucket_name}/*",
-                }
-            ],
-        }
-
         try:
             self.client.make_bucket(self.bucket_name)
-            self.client.set_bucket_policy(self.bucket_name, json.dumps(policy_read_only))
         except S3Error as err:
-            if err.code != "BucketAlreadyOwnedByYou":
+            # `AccessDenied` will be raised if bucket already exists and we do not have
+            # permission to create
+            if err.code not in ("BucketAlreadyOwnedByYou", "AccessDenied"):
                 raise
 
         return MinIOResource(resource=f"minio://{self.bucket_name}/")
@@ -63,7 +55,7 @@ class MinIOStorage(Storage):
         if not file_path.startswith(str(self.local_dir)):
             file_path = shutil.copy(file_path, Path(self.local_dir, file_name))
 
-        object_name = str(Path(self.folder_name, file_name))
+        object_name = str(Path(*self.folder_name, file_name))
 
         try:
             self.client.fput_object(
@@ -76,11 +68,11 @@ class MinIOStorage(Storage):
             logger.exception(err)
             raise
 
-        return MinIOResource(resource=f"minio://{self.bucket_name}/{self.folder_name}/{file_name}")
+        return MinIOResource(resource=f"minio://{self.bucket_name}/{object_name}")
 
     def get_file(self, data_file: str) -> str:
         if not data_file.startswith("minio://"):
-            raise NotValidScheme("Object file prefix is invalid: expected `minio://`")
+            raise NotValidScheme(f"Object file prefix for '{data_file}' is invalid: expected `minio://`")
 
         # remove scheme and deconstruct path
         bucket_name, object_name = data_file[len("minio://") :].split("/", 1)

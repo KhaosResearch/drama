@@ -1,9 +1,8 @@
 import platform
 import tempfile
 from pathlib import Path
-from typing import Optional
 
-from pydantic import AnyUrl, BaseModel, BaseSettings
+from pydantic import AnyUrl, BaseModel, BaseSettings, SecretStr
 
 from drama.logger import get_logger
 
@@ -35,6 +34,9 @@ class _Settings(BaseSettings):
     API_KEY: str = "8ce654d9-0d68-4576-bad1-73794fa163f4"
     API_KEY_NAME: str = "access_token"
 
+    # this private key is used for secrets management
+    SECRETS_SK_KEY: SecretStr = "pLxrD3Jy45+Y8Fixo//xj0LMf11p1+y1sfG56LcqyEk="
+
     # for applications sub-mounted below a given URL path
     ROOT_PATH: str = ""
 
@@ -53,12 +55,13 @@ class _Settings(BaseSettings):
     KAFKA_BROKER_PORT: int = 9092
 
     # DFS
-    MINIO_HOST: Optional[str] = None
-    MINIO_PORT: int = 8090
+    MINIO_HOST: str = None
+    MINIO_USE_SSL: bool = True
+    MINIO_BUCKET: str = None
     MINIO_ACCESS_KEY: str = "minio"
     MINIO_SECRET_KEY: str = "minio"
 
-    HDFS_USERNAME: Optional[str] = "root"
+    HDFS_USERNAME: str = "root"
     HDFS_HOST: str = ""
     HDFS_PORT: int = 9000
 
@@ -67,10 +70,6 @@ class _Settings(BaseSettings):
     @property
     def KAFKA_CONN(self):
         return f"{self.KAFKA_BROKER_HOST}:{self.KAFKA_BROKER_PORT}"
-
-    @property
-    def MINIO_CONN(self):
-        return f"{self.MINIO_HOST}:{self.MINIO_PORT}"
 
     @property
     def HDFS_CONN(self):

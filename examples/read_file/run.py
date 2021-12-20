@@ -1,20 +1,20 @@
-from drama.models.task import TaskRequest
-from drama.models.workflow import WorkflowRequest
-from drama.worker import execute
+from drama.models.task import Task
+from drama.models.workflow import Workflow
+from drama.worker.scheduler import Scheduler
 
-task_one = TaskRequest(
+task_one = Task(
     name="ComponentImportFileOne",
     module="drama.core.catalog.load.ImportTSV",
     params={"url": "https://raw.githubusercontent.com/solidsnack/tsv/master/cities10.tsv"},
 )
 
-task_two = TaskRequest(
+task_two = Task(
     name="ComponentImportFileTwo",
     module="drama.core.catalog.load.ImportTSV",
     params={"url": "https://raw.githubusercontent.com/solidsnack/tsv/master/cities10.tsv"},
 )
 
-task_three = TaskRequest(
+task_three = Task(
     name="ComponentReadFile",
     module="drama.core.catalog.read.ReadTSV",
     inputs={
@@ -22,7 +22,13 @@ task_three = TaskRequest(
     },
 )
 
-workflow_request = WorkflowRequest(tasks=[task_one, task_two])
+workflow_request = Workflow(tasks=[task_one, task_two, task_three])
 
-# executes workflow
-workflow = execute(workflow_request)
+with Scheduler() as scheduler:
+    workflow = scheduler.run(workflow_request)
+    print(workflow)
+
+    import time
+
+    time.sleep(15)
+    print(scheduler.status(workflow_id=workflow.id))

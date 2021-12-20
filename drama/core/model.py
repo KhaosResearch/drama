@@ -25,3 +25,8 @@ class _BaseSimpleTabularDataset(DataType):
 class SimpleTabularDataset(_BaseSimpleTabularDataset):
     encoding: str = is_string("utf-8")
     file_format: str = is_string(".csv")
+
+
+@dataclass
+class DynamicParameter(DataType):
+    value: str = is_string()

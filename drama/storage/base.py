@@ -41,12 +41,16 @@ class LocalResource(Resource):
 
 
 class Storage(ABC):
-    def __init__(self, bucket_name: str, folder_name: str):
+    def __init__(self, bucket_name: str, folder_name: List[str]):
         self.bucket_name = bucket_name
+
+        if not isinstance(folder_name, list):
+            folder_name = [folder_name]
+
         self.folder_name = folder_name
 
         self.temp_dir = settings.DATA_DIR
-        self.local_dir = Path(self.temp_dir, self.bucket_name, self.folder_name)
+        self.local_dir = Path(self.temp_dir, self.bucket_name, *self.folder_name)
 
     def setup(self) -> LocalResource:
         """

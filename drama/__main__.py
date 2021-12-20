@@ -36,7 +36,7 @@ def cli():
 
     if args.command == "worker":
         dramatiq_ns, _ = make_argument_parser().parse_known_args()
-        setattr(dramatiq_ns, "broker", "drama.worker.actor")
+        setattr(dramatiq_ns, "broker", "drama.worker.scheduler")
 
         dramatiq_cli(dramatiq_ns)
     elif args.command == "server":

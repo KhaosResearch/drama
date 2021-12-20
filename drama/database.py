@@ -26,7 +26,7 @@ def create_db_connection() -> Database:
 
     db.client = client
 
-    return db.client.drama
+    return db.client.titan
 
 
 def close_db_connection() -> None:
@@ -38,4 +38,4 @@ def get_db_connection() -> Database:
     if not db.client:
         logger.debug("Client not connected")
         create_db_connection()
-    return db.client.drama
+    return db.client.titan

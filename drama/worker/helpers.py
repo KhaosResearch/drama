@@ -14,7 +14,6 @@ def load_from_file(filepath: str):
     Load module from absolute file path.
     """
     sys_path = sys.path.copy()
-
     try:
         filepath = os.path.abspath(filepath)
         sys.path.insert(0, os.path.dirname(filepath))
@@ -24,7 +23,6 @@ def load_from_file(filepath: str):
         module = __import__(module_name, {})
     finally:
         sys.path = sys_path
-
     return module
 
 
@@ -35,9 +33,11 @@ def load_from_module(module: str):
     try:
         imported_module = importlib.import_module(module)
     except ModuleNotFoundError:
-        raise ImportError(f"Could not import module {module}: some import packages were not found")
+        logger.exception(f"Could not import module {module}: some import packages were not found", exc_info=True)
+        raise ImportError(f"Module not found")
     except ImportError:
-        raise ImportError(f"Could not import module {module}")
+        logger.exception(f"Could not import module {module}", exc_info=True)
+        raise ImportError(f"Module import error")
     return imported_module
 
 

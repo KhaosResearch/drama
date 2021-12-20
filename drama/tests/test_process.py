@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from drama.datatype import DataType, is_integer
 from drama.models.messages import MessageType, Servo
 from drama.process import Process
+from drama.storage.backend.local import LocalStorage
 
 
 @dataclass
@@ -27,12 +28,14 @@ class PointB(Point):
 
 class ProcessWithOneInputOneUpstreamTestCase(unittest.TestCase):
     def setUp(self) -> None:
+        storage = LocalStorage(bucket_name="ProcessWithOneInputOneUpstreamTestCase", folder_name=["setUp"])
         self.process = Process(
             name="test-task-1",
             module="",
             params={},
             parent="test-workflow-1",
             inputs={"point": "test-task-0.Point"},
+            storage=storage,
         )
 
     @mock.patch("drama.process.Process._producer")
@@ -133,12 +136,14 @@ class ProcessWithOneInputOneUpstreamTestCase(unittest.TestCase):
 
 class ProcessWithTwoInputsOneUpstreamTestCase(unittest.TestCase):
     def setUp(self) -> None:
+        storage = LocalStorage(bucket_name="ProcessWithTwoInputsOneUpstreamTestCase", folder_name=["setUp"])
         self.process = Process(
             name="test-task-1",
             module="",
             params={},
             parent="test-workflow-2",
             inputs={"point_a": "test-task-0.PointA", "point_b": "test-task-0.PointB"},
+            storage=storage,
         )
 
     @mock.patch("drama.process.Process._consumer")

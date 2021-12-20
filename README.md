@@ -1,6 +1,9 @@
-## [drama](https://github.com/KhaosResearch/drama) 
+## [drama](https://github.com/benhid/drama) 
 
-<a href="https://github.com/KhaosResearch/drama"><img alt="Version: 0.5.5" src="https://img.shields.io/badge/version-0.5.5-success?color=0080FF&style=flat-square"></a> <a href="https://github.com/KhaosResearch/drama"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square"></a>
+![CI](https://github.com/benhid/drama/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/benhid/drama/actions/workflows/release.yml/badge.svg)
+![GitHub Release](https://img.shields.io/github/release/benhid/drama.svg)
+![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
 
 *`drama` is an asynchronous workflow executor engine supported by a command line tool and RESTful API.*
 
@@ -19,12 +22,12 @@ docker-compose [-f docker-compose-kafka.yml] up -d
 
 ### 🚀 Setup 
 
-#### Installation 
+#### Installation
 
 Via source code using [Poetry](https://github.com/python-poetry/poetry):
 
 ```commandline
-git clone https://github.com/KhaosResearch/drama.git
+git clone https://github.com/benhid/drama.git
 cd drama
 poetry install
 ```
@@ -80,12 +83,11 @@ Take a look at the [catalog](examples) for some examples on how to develop your 
 To run a workflow from Python, provide a list of `TaskRequest`s and wrap them up in a `WorkflowRequest`.
 
 ```python
-from drama.manager import TaskManager
-from drama.models.task import TaskRequest
-from drama.models.workflow import WorkflowRequest
-from drama.worker import execute
+from drama.models.task import Task
+from drama.models.workflow import Workflow
+from drama.worker.scheduler import Scheduler
 
-task_import_file = TaskRequest(
+task_import_file = Task(
     name="LoadIrisDataset",
     module="drama.core.catalog.load.ImportFile",
     params={
@@ -93,17 +95,10 @@ task_import_file = TaskRequest(
     }
 )
 
-workflow_request = WorkflowRequest(
-    tasks=[
-        task_import_file
-    ]
-)
+workflow_request = Workflow(tasks=[task_import_file])
 
-workflow = execute(workflow_request)
-print(workflow)
-
-# gets results
-print(TaskManager().find({"parent": workflow.id}))
+with Scheduler() as scheduler:
+    scheduler.run(workflow_request)
 ```
 
 _(This script is complete, it should run "as is")_

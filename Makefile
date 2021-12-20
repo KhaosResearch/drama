@@ -13,6 +13,11 @@ black: clean
 lint:
 	@poetry run mypy drama/
 
+release:
+	@echo Bump version to v$$(poetry version --short)
+	@git tag v$$(poetry version --short)
+	@git push origin v$$(poetry version --short)
+
 .PHONY: tests
 
 tests:

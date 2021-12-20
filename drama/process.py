@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from abc import abstractmethod
 from datetime import datetime
@@ -16,14 +17,14 @@ from drama.storage.base import Resource, Storage
 from drama.storage.helpers import get_available_storage
 
 
-class LoggingMessageType(str, Enum):
+class _LoggingMessageType(str, Enum):
     INFO = "INFO"
     DEBUG = "DEBUG"
     WARN = "WARNING"
     ERROR = "ERROR"
 
 
-class BaseProcess:
+class _BaseProcess:
     """
     Process class inherited by user process script.
     Its attributes and methods can be accessed from within an `execute` Python function.
@@ -36,6 +37,7 @@ class BaseProcess:
         parent: str,
         params: dict,
         inputs: Optional[Dict[str, str]] = None,
+        secrets: Optional[Dict[str, str]] = None,
         storage: Optional[Storage] = None,
     ):
         """
@@ -53,16 +55,24 @@ class BaseProcess:
             inputs = {}
         self.inputs = inputs
 
+        # UNSEALED secrets
+        self.secrets = secrets
+
         # storage
         if not storage:
             _storage = get_available_storage()
-            storage = _storage(bucket_name=self.parent, folder_name=self.name)
+            storage = _storage(bucket_name=self.parent, folder_name=[self.name])
         self.storage = storage
         self.storage.setup()
 
         # logging
         self.logger = get_logger(__name__)
-        self.logging_file = tempfile.NamedTemporaryFile(dir=storage.temp_dir)
+
+        # Note that opening a NamedTemporaryFile multiple times will cause a
+        # PermissionError on Windows. To avoid this, one solution is to set the
+        # delete flag to False. This, however, requires to delete the file manually
+        # when it is closed. Base on: https://stackoverflow.com/questions/23212435.
+        self.logging_file = tempfile.NamedTemporaryFile(dir=storage.temp_dir, delete=False)
 
     @abstractmethod
     def to_downstream(self, data: DataType) -> Message:
@@ -85,30 +95,30 @@ class BaseProcess:
         Logs INFO message.
         """
         self.logger.info(message)
-        self._log(message, LoggingMessageType.INFO)
+        self._log(message, _LoggingMessageType.INFO)
 
     def debug(self, message: Union[str, List[str]]) -> None:
         """
         Logs DEBUG message.
         """
         self.logger.debug(message)
-        self._log(message, LoggingMessageType.DEBUG)
+        self._log(message, _LoggingMessageType.DEBUG)
 
     def warn(self, message: Union[str, List[str]]) -> None:
         """
         Logs WARNING message.
         """
         self.logger.warn(message)
-        self._log(message, LoggingMessageType.WARN)
+        self._log(message, _LoggingMessageType.WARN)
 
     def error(self, message: Union[str, List[str]]) -> None:
         """
         Logs ERROR message.
         """
         self.logger.exception(message)
-        self._log(message, LoggingMessageType.ERROR)
+        self._log(message, _LoggingMessageType.ERROR)
 
-    def _log(self, message: Union[str, List[str]], flag: LoggingMessageType) -> None:
+    def _log(self, message: Union[str, List[str]], flag: _LoggingMessageType) -> None:
         """
         Writes message to logging file.
         """
@@ -120,7 +130,7 @@ class BaseProcess:
                 log.write(f"{line}\n")
 
 
-class Process(BaseProcess):
+class Process(_BaseProcess):
     """
     Actor process based on Apache Kafka and Avro for inter-component communication.
     """
@@ -145,9 +155,10 @@ class Process(BaseProcess):
         parent: str,
         params: dict,
         inputs: Optional[Dict[str, str]] = None,
+        secrets: Optional[Dict[str, str]] = None,
         storage: Optional[Storage] = None,
     ):
-        super().__init__(name, module, parent, params, inputs, storage)
+        super().__init__(name, module, parent, params, inputs, secrets, storage)
         self.logger = get_logger(__name__, name=name)
 
     def to_downstream(self, data: DataType) -> Message:
@@ -163,7 +174,7 @@ class Process(BaseProcess):
         stringify_schema = json.dumps(servo_schema, default=str)
 
         # wrapper
-        message_key = f"{self.name}.{data.key}"
+        message_key = f"{self.name}.{data.name}"
         message = Message(
             type=MessageType.BLOCK,
             key=message_key,
@@ -292,11 +303,6 @@ class Process(BaseProcess):
         If `force_interruption` is set to True, send interruption message instead (*note*: this flag will
         trigger an exception chain against downstream tasks in a workflow).
         """
-        if force_interruption:
-            self.error(["Task brutally interrupted"])
-        else:
-            self.debug(["Task gracefully closed"])
-
         logging_filename = "log.txt"
 
         # send log to remote storage
@@ -305,6 +311,10 @@ class Process(BaseProcess):
         # once uploaded, delete named temporal file in local temp dir
         self.logging_file.close()
 
+        # delete the temporary file explicitly since it was opened with the
+        # delete flag set to False.
+        os.unlink(self.logging_file.name)
+
         if remove_local_dir:
             # remove local directory without deleting the logging file (always kept for debugging purposes)
             self.storage.remove_local_dir(omit_files=[logging_filename])
@@ -312,6 +322,11 @@ class Process(BaseProcess):
         # send interruption signal
         signal = SignalMessage(data=SignalType.INTE if force_interruption else SignalType.STOP)
         self._send(signal)
+
+        if force_interruption:
+            self.error(["Task brutally interrupted"])
+        else:
+            self.debug(["Task gracefully closed"])
 
         return logging_remote
 
@@ -334,12 +349,12 @@ class Process(BaseProcess):
         """
         return KafkaProducer(bootstrap_servers=[settings.KAFKA_CONN], **kwargs)
 
-    def _consumer(self, **kwargs) -> KafkaConsumer:
+    def _consumer(self, parent: str = None, **kwargs) -> KafkaConsumer:
         """
         Creates a new Kafka consumer.
         """
         return KafkaConsumer(
-            self.parent,
+            parent or self.parent,
             bootstrap_servers=[settings.KAFKA_CONN],
             auto_offset_reset="earliest",
             **kwargs,

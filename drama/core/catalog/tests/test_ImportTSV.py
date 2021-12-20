@@ -9,7 +9,7 @@ from drama.core.catalog.load.ImportTSV import execute
 from drama.core.catalog.tests import RESOURCES
 from drama.core.model import SimpleTabularDataset
 from drama.models.task import TaskResult
-from drama.storage import LocalStorage
+from drama.storage.backend.local import LocalResource, LocalStorage
 
 
 def _mocked_urlretrieve(url, filepath):
@@ -31,23 +31,28 @@ class ImportTSVIntegrationTestCase(unittest.TestCase):
         url = "http://testsite.com/param.tsv"
         data = execute(pcs=self.pcs, url=url)
 
-        with Path(self.pcs.storage.local_dir, "out.tsv").open() as fin:
-            out_tsv = fin.read()
+        # assert output data is valid
+        self.assertIs(type(data), TaskResult)
 
         # assert output file exists
         self.assertTrue(Path(self.pcs.storage.local_dir, "out.tsv").is_file())
 
+        with Path(self.pcs.storage.local_dir, "out.tsv").open() as fin:
+            out_tsv = fin.read()
+
         # assert output file content is valid
         self.assertMultiLineEqual("param1  False\nparam2	Yes\nparam3\n", out_tsv)
 
-        # assert output data is valid
-        self.assertIs(type(data), TaskResult)
+        # assert downstream data is valid
+        resource = LocalResource(scheme="", resource="/tmp/tests/test_ImportTSV/out.tsv")
+        to_downstream = SimpleTabularDataset(resource=resource, delimiter="\t", file_format=".tsv")
+        self.pcs.to_downstream.assert_called_with(to_downstream)
 
     def tearDown(self) -> None:
         self.pcs.storage.remove_local_dir()
 
 
-class ImportFileComponentTestCase(unittest.TestCase):
+class ImportTSVComponentTestCase(unittest.TestCase):
     def test_definition(self):
         meta: TaskMeta = getattr(execute, "__meta__")
         self.assertEqual(meta.inputs, None)

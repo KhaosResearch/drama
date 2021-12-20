@@ -77,7 +77,7 @@ async def get_documentation(api_key: APIKey = Depends(get_api_key)):
 
 
 def run_server():
-    logger = get_logger(__name__)
+    logger = get_logger(__name__, "app")
     logger.info(f"🚀 Deploying server at http://{settings.API_HOST}:{settings.API_PORT}")
 
     uvicorn.run(
