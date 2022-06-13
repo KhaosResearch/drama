@@ -27,7 +27,7 @@ docker-compose [-f docker-compose-kafka.yml] up -d
 Via source code using [Poetry](https://github.com/python-poetry/poetry):
 
 ```commandline
-git clone https://github.com/benhid/drama.git
+git clone https://github.com/KhaosResearch/drama.git
 cd drama
 poetry install
 ```
